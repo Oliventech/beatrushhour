@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:beatrushhour/settings.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:google_maps_webservice/places.dart';
@@ -7,6 +8,7 @@ import 'package:flutter_google_places/flutter_google_places.dart';
 import 'package:google_maps_webservice/distance.dart';
 
 class MyHomePage extends StatefulWidget {
+
   @override
   _MyHomePageState createState() => _MyHomePageState();
 }
@@ -27,7 +29,9 @@ class _MyHomePageState extends State<MyHomePage> {
 
     var initializationSettingsAndroid =
     new AndroidInitializationSettings('@mipmap/ic_launcher');
-    var initializationSettingsIOS = new IOSInitializationSettings();
+    var initializationSettingsIOS = new IOSInitializationSettings(
+        onDidReceiveLocalNotification: onDidReceiveLocalNotification
+    );
     var initializationSettings = new InitializationSettings(
         initializationSettingsAndroid, initializationSettingsIOS);
 
@@ -36,13 +40,43 @@ class _MyHomePageState extends State<MyHomePage> {
         onSelectNotification: onSelectNotification);
   }
 
+  Future onDidReceiveLocalNotification(
+      int id, String title, String body, String payload) async {
+    // display a dialog with the notification details, tap ok to go to another page
+    showDialog(
+      context: context,
+      builder: (BuildContext context) => CupertinoAlertDialog(
+        title: Text(title),
+        content: Text(body),
+        actions: [
+          CupertinoDialogAction(
+            isDefaultAction: true,
+            child: Text('Ok'),
+            onPressed: () async {
+              Navigator.pop(context);
+            },
+          )
+        ],
+      ),
+    );
+  }
+
   Future onSelectNotification(String payload) async {
     showDialog(
       context: context,
       builder: (_) {
         return new AlertDialog(
-          title: Text("Less traffic"),
-          content: Text("Duration : $duration"),
+          title: Text("Less traffic on road"),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.start,
+            children: [
+              Text("Duration : $duration"),
+              Text(''),
+              Text("Destination: ${placeList[1]}"),
+            ],
+          ),
         );
       },
     );
@@ -52,13 +86,15 @@ class _MyHomePageState extends State<MyHomePage> {
     var androidPlatformChannelSpecifics = new AndroidNotificationDetails(
         'your channel id', 'your channel name', 'your channel description',
         importance: Importance.Max, priority: Priority.High);
-    var iOSPlatformChannelSpecifics = new IOSNotificationDetails();
+    var iOSPlatformChannelSpecifics = new IOSNotificationDetails(
+
+    );
     var platformChannelSpecifics = new NotificationDetails(
         androidPlatformChannelSpecifics, iOSPlatformChannelSpecifics);
     await flutterLocalNotificationsPlugin.show(
       0,
-      'New Post',
-      'How to Show Notification in Flutter',
+      'Less traffic on the road!',
+      'The time to reach ${placeList[1]} is now $duration',
       platformChannelSpecifics,
       payload: 'Default_Sound',
     );
@@ -93,7 +129,7 @@ class _MyHomePageState extends State<MyHomePage> {
       barPos == 0 ? _fromSearchBarController.text = '${detail.result.formattedAddress}':_toSearchBarController.text = '${detail.result.formattedAddress}';
     });
 
-    placeList[barPos]  = detail.result;
+    placeList[barPos]  = detail.result.formattedAddress;
 
     latitudeList[barPos] = detail.result.geometry.location.lat;
     longitudeList[barPos] = detail.result.geometry.location.lng;
@@ -136,15 +172,35 @@ class _MyHomePageState extends State<MyHomePage> {
       distanceMatrix.dispose();
     }
 
-    int seconds = Duration(minutes: settingsRef.timeThreshold).inSeconds;
+    int seconds = Duration(minutes: SettingsPageState.timeThreshold).inSeconds;
     print('seconds: $seconds');
     print('duration: $duration');
     if(duration <= seconds) {
       _timer.cancel();
       _showNotificationWithDefaultSound();
+      duration = (duration / 60).round();
+      _toSearchBarController.clear();
+      _fromSearchBarController.clear();
+      setState(() {});
       print('yay, time reached');
     }
   }
+
+  void calculateRepeatedly() {
+    _timer = new Timer.periodic(
+      Duration(seconds: 5),
+          (Timer timer) {
+        activateDistanceCalculation();
+        if(timeToDouble(SettingsPageState.timeSelectedList[1]) < timeToDouble(TimeOfDay.now())) {
+          _timer.cancel();
+        }
+      },
+    );
+  }
+
+  var timerToBeginCalculation;
+
+  double timeToDouble(TimeOfDay myTime) => myTime.hour + myTime.minute/60.0;
 
   @override
   Widget build(BuildContext context) {
@@ -160,7 +216,7 @@ class _MyHomePageState extends State<MyHomePage> {
                   _selection = result;
                   Navigator.push(context, MaterialPageRoute(
                       builder: (context) => SettingsPage()
-                  ));
+                  )).then((value) => setState(() {}));
                 });
               },
               itemBuilder: (BuildContext context) => <PopupMenuEntry<PageNavigator>>[
@@ -180,7 +236,13 @@ class _MyHomePageState extends State<MyHomePage> {
               controller: _fromSearchBarController,
               onTap: () => triggerApiResults(0),
               decoration: InputDecoration(
-                labelText: 'From',
+                  hintText: 'From',
+                  suffixIcon: IconButton(
+                    icon: Icon(Icons.clear_rounded),
+                    onPressed: _fromSearchBarController.text != null ? () {
+                      _fromSearchBarController.text = '';
+                    }:null,
+                  )
               ),
             ),
           ),
@@ -190,7 +252,13 @@ class _MyHomePageState extends State<MyHomePage> {
               controller: _toSearchBarController,
               onTap: () => triggerApiResults(1),
               decoration: InputDecoration(
-                labelText: 'To',
+                  hintText: 'To',
+                  suffixIcon: IconButton(
+                    icon: Icon(Icons.clear_rounded),
+                    onPressed: _toSearchBarController.text != null ? () {
+                      _toSearchBarController.text = '';
+                    }:null,
+                  )
               ),
             ),
           ),
@@ -203,23 +271,23 @@ class _MyHomePageState extends State<MyHomePage> {
           RaisedButton(
             child: Text('Done'),
             onPressed: () {
-              // if(settingsRef.timeSelectedList[0] < TimeOfDay.now()) {
-              //   timerToBeginOtherTimer = new Timer.periodic(
-              //     Duration(seconds: 2),
-              //       (Timer timer) {
-              //       print(TimeOfDay.now());
-              //         if(settingsRef.timeSelectedList[0] <= TimeOfDay.now()) {
-              //
-              //         }
-              //       }
-              //   );
-              // }
-              _timer = new Timer.periodic(
-                Duration(seconds: 5),
-                    (Timer timer) {
-                  activateDistanceCalculation();
-                },
-              );
+              print('Now: ${TimeOfDay.now()}');
+              print('TIme selected: ${SettingsPageState.timeSelectedList[0]}');
+              if(timeToDouble(SettingsPageState.timeSelectedList[0]) > timeToDouble(TimeOfDay.now()) && timeToDouble(SettingsPageState.timeSelectedList[1]) > timeToDouble(TimeOfDay.now())) {
+                timerToBeginCalculation = new Timer.periodic(
+                    Duration(seconds: 2),
+                        (Timer timer) {
+                      print(timeToDouble(TimeOfDay.now()));
+                      if(timeToDouble(SettingsPageState.timeSelectedList[0]) <= timeToDouble(TimeOfDay.now())) {
+                        timerToBeginCalculation.cancel();
+                        calculateRepeatedly();
+                      }
+                    }
+                );
+              }
+              else {
+                calculateRepeatedly();
+              }
             },
           ),
           RaisedButton(

@@ -3,23 +3,26 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class SettingsPage extends StatefulWidget {
+
+  SettingsPage({Key key, this.title}) : super(key: key);
+
+  final String title;
+
   @override
-  _SettingsPageState createState() => _SettingsPageState();
+  SettingsPageState createState() => SettingsPageState();
 }
 
-class _SettingsPageState extends State<SettingsPage> {
+class SettingsPageState extends State<SettingsPage> {
 
-  static final _SettingsPageState listRef = new _SettingsPageState._internal();
+  static int timeThreshold = 20;
 
-  factory _SettingsPageState() {
-    return listRef;
+  static String timeInNormalFormat = '${TimeOfDay.now().hour}:${TimeOfDay.now().minute}';
+
+  static List timeSelectedList = [TimeOfDay.now(), TimeOfDay(hour: TimeOfDay.now().minute+30 >= 60? TimeOfDay.now().hour+1:TimeOfDay.now().hour, minute: TimeOfDay.now().minute+30 >= 60? TimeOfDay.now().minute%30:TimeOfDay.now().minute+30)];
+
+  String giveTimeInNormalFormat(TimeOfDay time) {
+    return '${time.hour}:${time.minute}';
   }
-
-  _SettingsPageState._internal();
-
-  int timeThreshold = 0;
-
-  List timeSelectedList = [];
 
   Future<void> showNumberPicker() {
     return showDialog(
@@ -32,7 +35,7 @@ class _SettingsPageState extends State<SettingsPage> {
               childCount: 1440,
               itemExtent: 80,
               onSelectedItemChanged: (value) {
-                timeThreshold = value;
+                  timeThreshold = value;
               },
               itemBuilder: (context, pickerIndex) {
                 return Align(
@@ -46,13 +49,17 @@ class _SettingsPageState extends State<SettingsPage> {
               RaisedButton(
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                 child: Text('Cancel'),
-                  onPressed: () => Navigator.pop(context),
+                  onPressed: () {
+                    Navigator.pop(context);
+                    setState(() {});
+                  }
               ),
               RaisedButton(
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                 child: Text('Save'),
                 onPressed: () {
                   Navigator.pop(context);
+                  setState(() {});
                 },
               ),
             ],
@@ -61,27 +68,38 @@ class _SettingsPageState extends State<SettingsPage> {
     );
   }
 
-  showTextField() {
+  TextEditingController keyTextController = TextEditingController();
 
+  void dispose() {
+    super.dispose();
+    keyTextController.dispose();
   }
 
   showPickerOfTime(index) {
     showTimePicker(
+        cancelText: 'Save',
         context: context,
-        initialTime: TimeOfDay.now(),
-    ).then((value) => timeSelectedList[index] = value);
+        initialTime: index == 0?timeSelectedList[0]:timeSelectedList[1],
+    ).then((value) {
+      setState(() {
+        timeSelectedList[index] = value;
+      });
+    });
   }
 
   List settingsPageItems = [
     'Notify me when',
     'Start time',
     'End time',
-    'Calls',
-    'Key'
   ];
 
   @override
   Widget build(BuildContext context) {
+    List trailingList = [
+      Text('$timeThreshold'),
+      Text('${giveTimeInNormalFormat(timeSelectedList[0])}'),
+      Text('${giveTimeInNormalFormat(timeSelectedList[1])}'),
+    ];
 
     return Scaffold(
         appBar: AppBar(
@@ -92,18 +110,16 @@ class _SettingsPageState extends State<SettingsPage> {
           itemBuilder: (context, index) {
             return ListTile(
               title: Text(settingsPageItems[index]),
+              trailing: trailingList[index],
               onTap: () {
                 switch (index) {
                   case 0: showNumberPicker();
                   break;
-                  case 1: showPickerOfTime(index);
+                  case 1: showPickerOfTime(0);
                   break;
-                  case 2: showPickerOfTime(index);
+                  case 2: showPickerOfTime(1);
                   break;
-                  case 3: showNumberPicker();
-                  break;
-                  case 4: showTextField();
-                  break;
+                  default: showPickerOfTime(1);
                 }
               },
             );
@@ -115,5 +131,3 @@ class _SettingsPageState extends State<SettingsPage> {
     );
   }
 }
-
-final settingsRef = _SettingsPageState();
