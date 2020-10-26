@@ -25,6 +25,9 @@ class SettingsPageState extends State<SettingsPage> {
   }
 
   Future<void> showNumberPicker() {
+
+    int value;
+
     return showDialog(
         context: context,
         builder: (BuildContext context) {
@@ -34,8 +37,8 @@ class SettingsPageState extends State<SettingsPage> {
             content: CupertinoPicker.builder(
               childCount: 1440,
               itemExtent: 80,
-              onSelectedItemChanged: (value) {
-                  timeThreshold = value;
+              onSelectedItemChanged: (val) {
+                value = val;
               },
               itemBuilder: (context, pickerIndex) {
                 return Align(
@@ -58,6 +61,10 @@ class SettingsPageState extends State<SettingsPage> {
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                 child: Text('Save'),
                 onPressed: () {
+                  if(value != null) {
+                    timeThreshold = value;
+                  }
+
                   Navigator.pop(context);
                   setState(() {});
                 },
@@ -75,16 +82,19 @@ class SettingsPageState extends State<SettingsPage> {
     keyTextController.dispose();
   }
 
+
   showPickerOfTime(index) {
     showTimePicker(
-        cancelText: 'Save',
         context: context,
         initialTime: index == 0?timeSelectedList[0]:timeSelectedList[1],
     ).then((value) {
       setState(() {
-        timeSelectedList[index] = value;
+        if(value != null) {
+          timeSelectedList[index] = value;
+        }
       });
     });
+
   }
 
   List settingsPageItems = [

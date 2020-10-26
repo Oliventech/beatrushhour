@@ -42,7 +42,6 @@ class _MyHomePageState extends State<MyHomePage> {
 
   Future onDidReceiveLocalNotification(
       int id, String title, String body, String payload) async {
-    // display a dialog with the notification details, tap ok to go to another page
     showDialog(
       context: context,
       builder: (BuildContext context) => CupertinoAlertDialog(
@@ -52,7 +51,7 @@ class _MyHomePageState extends State<MyHomePage> {
           CupertinoDialogAction(
             isDefaultAction: true,
             child: Text('Ok'),
-            onPressed: () async {
+            onPressed: () {
               Navigator.pop(context);
             },
           )
@@ -94,7 +93,7 @@ class _MyHomePageState extends State<MyHomePage> {
     await flutterLocalNotificationsPlugin.show(
       0,
       'Less traffic on the road!',
-      'The time to reach ${placeList[1]} is now $duration',
+      'The time to reach ${placeList[1]} is now $duration minutes',
       platformChannelSpecifics,
       payload: 'Default_Sound',
     );
@@ -177,8 +176,9 @@ class _MyHomePageState extends State<MyHomePage> {
     print('duration: $duration');
     if(duration <= seconds) {
       _timer.cancel();
-      _showNotificationWithDefaultSound();
       duration = (duration / 60).round();
+      _showNotificationWithDefaultSound();
+      placeList = List.filled(2, 0);
       _toSearchBarController.clear();
       _fromSearchBarController.clear();
       setState(() {});
@@ -190,9 +190,11 @@ class _MyHomePageState extends State<MyHomePage> {
     _timer = new Timer.periodic(
       Duration(seconds: 5),
           (Timer timer) {
-        activateDistanceCalculation();
+
         if(timeToDouble(SettingsPageState.timeSelectedList[1]) < timeToDouble(TimeOfDay.now())) {
           _timer.cancel();
+        } else {
+          activateDistanceCalculation();
         }
       },
     );
@@ -241,6 +243,9 @@ class _MyHomePageState extends State<MyHomePage> {
                     icon: Icon(Icons.clear_rounded),
                     onPressed: _fromSearchBarController.text != null ? () {
                       _fromSearchBarController.text = '';
+                      setState(() {});
+                      timerToBeginCalculation.cancel();
+                      _timer.cancel();
                     }:null,
                   )
               ),
@@ -257,29 +262,32 @@ class _MyHomePageState extends State<MyHomePage> {
                     icon: Icon(Icons.clear_rounded),
                     onPressed: _toSearchBarController.text != null ? () {
                       _toSearchBarController.text = '';
+                      setState(() {});
+                      timerToBeginCalculation.cancel();
+                      _timer.cancel();
                     }:null,
                   )
               ),
             ),
           ),
-          RaisedButton(
-            child: Text('Cancel'),
-            onPressed: () {
-              _timer.cancel();
-            },
-          ),
+          Text(''),
           RaisedButton(
             child: Text('Done'),
-            onPressed: () {
+            onPressed: _toSearchBarController == null || _fromSearchBarController == null || _toSearchBarController.text.isEmpty || _fromSearchBarController.text.isEmpty ? null:() {
               print('Now: ${TimeOfDay.now()}');
               print('TIme selected: ${SettingsPageState.timeSelectedList[0]}');
+              print('DOUBLE TIME ${timeToDouble(TimeOfDay.now())}');
+              print('NOW TIME + C ${timeToDouble(SettingsPageState.timeSelectedList[0])}');
+
               if(timeToDouble(SettingsPageState.timeSelectedList[0]) > timeToDouble(TimeOfDay.now()) && timeToDouble(SettingsPageState.timeSelectedList[1]) > timeToDouble(TimeOfDay.now())) {
+
                 timerToBeginCalculation = new Timer.periodic(
                     Duration(seconds: 2),
                         (Timer timer) {
                       print(timeToDouble(TimeOfDay.now()));
                       if(timeToDouble(SettingsPageState.timeSelectedList[0]) <= timeToDouble(TimeOfDay.now())) {
                         timerToBeginCalculation.cancel();
+                        print('Timer cancelled');
                         calculateRepeatedly();
                       }
                     }
@@ -291,9 +299,15 @@ class _MyHomePageState extends State<MyHomePage> {
             },
           ),
           RaisedButton(
-            child: Text('For testing notifications'),
-            onPressed: () => _showNotificationWithDefaultSound(),
-          )
+            child: Text('Cancel'),
+            onPressed: () {
+              _timer.cancel();
+            },
+          ),
+          // RaisedButton(
+          //   child: Text('For testing notifications'),
+          //   onPressed: () => _showNotificationWithDefaultSound(),
+          // )
         ],
       ),
     );
