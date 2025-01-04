@@ -1,20 +1,29 @@
-import 'package:beatrushhour/main_page.dart';
+import 'package:beat_rush_hour/getx/bindings/app_initial_bindings.dart';
+import 'package:beat_rush_hour/routes/home_page.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:get/get.dart';
 
-class MyApp extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-          brightness: Brightness.dark,
-          primarySwatch: Colors.green
-      ),
-      home: MyHomePage(),
-    );
-  }
+Future<void> main() async {
+  await dotenv.load(fileName: "assets/.env");
+
+  WidgetsFlutterBinding.ensureInitialized();
+
+  runApp(const MyApp());
 }
 
-void main() async {
-  runApp(MyApp());
+class MyApp extends StatelessWidget {
+  const MyApp({super.key});
+
+  // This widget is the root of your application.
+  @override
+  Widget build(BuildContext context) {
+    return GetMaterialApp(
+      darkTheme: ThemeData.dark(),
+      themeMode: ThemeMode.dark,
+      debugShowCheckedModeBanner: false,
+      initialBinding: AppInitialBindings(),
+      home: const MyHomePage(),
+    );
+  }
 }
