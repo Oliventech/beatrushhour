@@ -13,6 +13,8 @@ class GoogleApiController extends GetxController {
 
   @override
   void onInit() {
+    apiController = Get.find<ApiController>();
+
     places = FlutterGooglePlacesSdk(dotenv.get('API_KEY'));
     super.onInit();
   }
@@ -32,45 +34,46 @@ class GoogleApiController extends GetxController {
     return placeData;
   }
 
-  Future<RoutesResponse> getETA(
-      {required LatLng origin, required LatLng destination,}) async {
+  Future<RoutesResponse> getETA({
+    required LatLng origin,
+    required LatLng destination,
+  }) async {
+    Map<String, dynamic> headers = {
+      "X-Goog-FieldMask": "routes.duration",
+      "Content-Type": "application/json",
+      "X-Goog-Api-Key": dotenv.get('API_KEY'),
+    };
 
-        Map<String, dynamic> headers = {
-          "X-Goog-FieldMask":"routes.duration",
-          "Content-Type": "application/json",
-          "X-Goog-Api-Key": dotenv.get('API_KEY'),
-        };
-
-        Map<String, dynamic> body = {
-    "origin": {
+    Map<String, dynamic> body = {
+      "origin": {
         "location": {
-            "latLng": {
-                "latitude": origin.lat,
-                "longitude": origin.lng
-            }
+          "latLng": {"latitude": origin.lat, "longitude": origin.lng}
         }
-    },
-    "destination": {
+      },
+      "destination": {
         "location": {
-            "latLng": {
-                "latitude": destination.lat,
-                "longitude": destination.lng
-            }
+          "latLng": {"latitude": destination.lat, "longitude": destination.lng}
         }
-    },
-    "travelMode": "DRIVE",
-    "routingPreference": "TRAFFIC_AWARE",
-    "computeAlternativeRoutes": false,
-    "routeModifiers": {
+      },
+      "travelMode": "DRIVE",
+      "routingPreference": "TRAFFIC_AWARE",
+      "computeAlternativeRoutes": false,
+      "routeModifiers": {
         "avoidTolls": false,
         "avoidHighways": false,
         "avoidFerries": false
-    },
-    "languageCode": "en-US",
-    "units": "IMPERIAL"
+      },
+      "languageCode": "en-US",
+      "units": "IMPERIAL"
     };
 
-    Response? res = await apiController.post(constants.ROUTES_ETA_URL, postBodyType: PostBodyType.json, shouldParse: true, headers: headers, body: body,);
+    Response? res = await apiController.post(
+      constants.ROUTES_ETA_URL,
+      postBodyType: PostBodyType.json,
+      shouldParse: true,
+      headers: headers,
+      body: body,
+    );
     Map<String, dynamic> dataInMap = res?.data as Map<String, dynamic>;
     return RoutesResponse.fromJson(dataInMap);
   }

@@ -3,7 +3,6 @@ import 'dart:collection';
 import 'package:beat_rush_hour/classes/routes/home_page/text_form_field_info.dart';
 import 'package:beat_rush_hour/getx/controllers/google_api_controller.dart';
 import 'package:beat_rush_hour/getx/states/routes/home_page/home_page_text_field_state.dart';
-import 'package:beat_rush_hour/models/routes_response.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_google_places_sdk/flutter_google_places_sdk.dart';
 import 'package:fluttertoast/fluttertoast.dart';
@@ -17,7 +16,7 @@ enum HomePageFieldType {
 class HomePageController extends GetxController {
   late GoogleApiController googleApiController;
 
-  Duration? duration;
+  Duration? thresholdDuration;
 
   Map<HomePageFieldType, TextFormFieldInfo> textFormFieldInfoMap =
       <HomePageFieldType, TextFormFieldInfo>{
@@ -82,53 +81,57 @@ class HomePageController extends GetxController {
     textFormFieldInfoMap[type]?.controller.closeView(selectedValue.fullText);
   }
 
-  Future<void> onSubmit() async {
-    //verify
-    Iterable<HomePageFieldType> keys = textFormFieldInfoMap.keys;
+  Future<void> onSubmit(BuildContext context) async {
+    try {
+      //verify
+      Iterable<HomePageFieldType> keys = textFormFieldInfoMap.keys;
 
-    bool hasError = false;
+      bool hasError = false;
 
-    for (HomePageFieldType key in keys) {
-      TextFormFieldInfo? info = textFormFieldInfoMap[key];
-      if (info?.prediction == null) {
-        showToast(
-          msg:
-              'Please select a valid address for ${info?.homePageFieldType == HomePageFieldType.origin ? 'origin' : 'destination'} from its search dropdown!',
-        );
-        hasError = true;
-        break;
-      }
-    }
-
-    if (hasError) return;
-
-    if (duration == null || duration == Duration.zero) {
-      showToast(msg: 'Please select a valid duration to reach!');
-      return;
-    }
-
-    textFormFieldInfoMap.forEach((key, value) async {
-      String? placeId = value.prediction?.placeId;
-      if (placeId != null) {
-        FetchPlaceResponse data =
-            await googleApiController.getPlaceData(placeId);
-        if (data.place?.latLng != null) {
-          textFormFieldInfoMap[key]?.latLng = data.place?.latLng;
-        } else {
-          showToast(msg: 'Some error occurred!');
+      for (HomePageFieldType key in keys) {
+        TextFormFieldInfo? info = textFormFieldInfoMap[key];
+        if (info?.prediction == null) {
+          showToast(
+            msg:
+                'Please select a valid address for ${info?.homePageFieldType == HomePageFieldType.origin ? 'origin' : 'destination'} from its search dropdown!',
+          );
           hasError = true;
+          break;
         }
       }
-    });
 
-    if (hasError) return;
+      if (hasError) return;
 
-    RoutesResponse res = await googleApiController.getETA(
-      origin: textFormFieldInfoMap[HomePageFieldType.origin]!.latLng!,
-      destination: textFormFieldInfoMap[HomePageFieldType.origin]!.latLng!,
-    );
+      if (thresholdDuration == null || thresholdDuration == Duration.zero) {
+        showToast(msg: 'Please select a valid duration to reach!');
+        return;
+      }
 
-    print(res);
+      await Future.forEach(keys, (key) async {
+        String? placeId = textFormFieldInfoMap[key]?.prediction?.placeId;
+        if (placeId != null) {
+          FetchPlaceResponse data =
+              await googleApiController.getPlaceData(placeId);
+          if (data.place != null && data.place?.latLng != null) {
+            textFormFieldInfoMap[key]?.latLng = data.place?.latLng;
+          } else {
+            showToast(msg: 'Some error occurred!');
+            hasError = true;
+          }
+        }
+      });
+
+      if (context.mounted) {
+        Navigator.of(context).pushNamed('/result');
+      } else {
+        throw Exception('Widget not mounted. Context not mounted while navigating to results page!');
+      }
+
+      if (hasError) return;
+    } catch (e) {
+      debugPrint('Error occurred while getting place details: ${e.toString()}');
+      showToast(msg: 'Sorry, some unexpected error occurred!');
+    }
   }
 
   void showToast({required String msg}) {
@@ -146,6 +149,6 @@ class HomePageController extends GetxController {
   }
 
   void setDuration({required Duration? value}) {
-    duration = value;
+    thresholdDuration = value;
   }
 }

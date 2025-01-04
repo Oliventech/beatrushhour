@@ -2,7 +2,6 @@ import 'dart:convert';
 
 import 'package:dio/dio.dart';
 import 'package:get/get.dart' hide Response, FormData;
-import 'package:beat_rush_hour/general/constants.dart' as constants;
 
 enum PostBodyType {
   formData,
