@@ -3,7 +3,6 @@ import 'package:beat_rush_hour/getx/controllers/routes/home_page_controller.dart
 import 'package:beat_rush_hour/getx/states/routes/home_page/home_page_text_field_state.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 
 class MyHomePage extends StatefulWidget {
@@ -15,6 +14,86 @@ class MyHomePage extends StatefulWidget {
 
 class _MyHomePageState extends State<MyHomePage> {
   final HomePageController homePageController = Get.find<HomePageController>();
+  bool isDialogBoxOpen = false;
+
+  @override
+  void initState() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      homePageController.resultState.listen(
+        (ResultState state) {
+          if (state != ResultState.initial && !isDialogBoxOpen) {
+            isDialogBoxOpen = true;
+
+            Get.dialog(
+              AlertDialog(
+                content: Obx(
+                  () {
+                    ResultState resultState =
+                        homePageController.resultState.value;
+                    if (resultState == ResultState.resultLoaded) {
+                      return Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            'You can now reach your destination in ${homePageController.humanizeDuration(homePageController.currentDuration!)}',
+                          ),
+                        ],
+                      );
+                    } else if (resultState == ResultState.loading) {
+                      return Center(
+                        child: CircularProgressIndicator(),
+                      );
+                    } else if (resultState == ResultState.success) {
+                      return Center(
+                        child: Text(
+                          'You can now close this app. No need to worry about checking maps repeatedly now! \n\nWe will periodically check the time need to reach your destination for the next three hours, and if it becomes less than the duration, we will notify you. If you get no notification during that time, then you can assume that time needed to reach your destination did not come below the time you had specified.',
+                        ),
+                      );
+                    } else {
+                      return Center(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.close_rounded,
+                              size: 50.0,
+                              color: Colors.redAccent,
+                            ),
+                            Text(
+                                'Sorry, some unexpected error occurred while fetching duration data!'),
+                          ],
+                        ),
+                      );
+                    }
+                  },
+                ),
+                scrollable: true,
+                actions: [
+                  ElevatedButton(
+                    onPressed: () {
+                      Get.back();
+                      isDialogBoxOpen = false;
+                    },
+                    child: Text('Ok'),
+                  )
+                ],
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.all(
+                    Radius.circular(
+                      20.0,
+                    ),
+                  ),
+                ),
+              ),
+              barrierDismissible: false,
+            );
+          }
+        },
+      );
+    });
+
+    super.initState();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -97,7 +176,7 @@ class _MyHomePageState extends State<MyHomePage> {
             Text("Select minutes you want to reach under!"),
             CupertinoTimerPicker(
               onTimerDurationChanged: (Duration duration) {
-                homePageController.setDuration(value: duration);
+                homePageController.setThresholdDuration(value: duration);
               },
             ),
             ElevatedButton.icon(
@@ -105,7 +184,7 @@ class _MyHomePageState extends State<MyHomePage> {
                 Icons.done_all_rounded,
               ),
               onPressed: () {
-                homePageController.onSubmit(context);
+                homePageController.onSubmit();
               },
               label: Text('Start'),
             )

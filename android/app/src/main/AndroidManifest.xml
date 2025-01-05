@@ -3,6 +3,9 @@
         android:label="beat_rush_hour"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
+        <meta-data
+  android:name="com.google.firebase.messaging.default_notification_channel_id"
+  android:value="BeatRushHour" />
         <activity
             android:name=".MainActivity"
             android:exported="true"
