@@ -3,6 +3,7 @@ import 'package:beat_rush_hour/getx/controllers/routes/home_page_controller.dart
 import 'package:beat_rush_hour/getx/states/routes/home_page/home_page_text_field_state.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_google_places_sdk/flutter_google_places_sdk.dart';
 import 'package:get/get.dart';
 
 class MyHomePage extends StatefulWidget {
@@ -133,7 +134,15 @@ class _MyHomePageState extends State<MyHomePage> {
                             } else if (info.state.value ==
                                 HomePageTextFieldState.suggestionsLoaded) {
                               return Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
+                                  Padding(
+                                    padding: const EdgeInsets.fromLTRB(12.0, 12.0, 12.0, 0.0),
+                                    child: Image(
+                                      image: FlutterGooglePlacesSdk
+                                          .ASSET_POWERED_BY_GOOGLE_ON_NON_WHITE,
+                                    ),
+                                  ),
                                   ...info.suggestionsList.map(
                                     (value) => ListTile(
                                       title: Text(value.fullText),

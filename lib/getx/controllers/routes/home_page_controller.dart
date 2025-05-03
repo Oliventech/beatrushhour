@@ -64,6 +64,7 @@ class HomePageController extends GetxController {
         type: type,
         value: HomePageTextFieldState.noSuggestionFound,
       );
+      textField.setPreviousText(text.trim());
       return;
     }
 
@@ -224,6 +225,7 @@ class HomePageController extends GetxController {
     Fluttertoast.showToast(
       msg: msg,
       toastLength: Toast.LENGTH_LONG,
+      gravity: ToastGravity.CENTER,
     );
   }
 
